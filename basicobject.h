@@ -1,7 +1,7 @@
 #ifndef BasicObject_H
 #define BasicObject_H
 
-#include <GL/glew.h>
+
 
 class BasicObject
 {

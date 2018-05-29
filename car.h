@@ -1,7 +1,8 @@
 #ifndef CAR_H
 #define CAR_H
 
-#include <GL/glew.h>
+
+#include "basicobject.h"
 
 class Car : BasicObject
 {
@@ -13,7 +14,10 @@ public:
     void update(glm::mat4& pojection, glm::mat4& view, glm::vec3& light);
     void transform(mat4& transform);   
     void draw();
-
+    //get current osition
+    vec4 getPos();
+    //car direction
+    vec4 getDir();
 protected:
 //    glm::mat4 m_modelMatrix;
 //  bool m_isInited;

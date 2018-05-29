@@ -20,12 +20,14 @@ using namespace glm;
 #include "car.h"
 
 bool	g_bShowCar = true;
+Car   g_car;
+
 void onKeyEvent(GLFWwindow* hWindow, int key, int scancode, int action, int mods);
 int main(int argc, char **argv) {
 	GLFWwindow* hWindow;
 
 	Sphere	m_background;
-	Car   m_object1;
+
 
 	printf("Hello All !\n");
 
@@ -82,7 +84,7 @@ int main(int argc, char **argv) {
 	// Cull triangles which normal is not towards the camera
 //x	glEnable(GL_CULL_FACE);
 	m_background.init();
-	m_object1.init();
+	g_car.init();
 	double lastTime = glfwGetTime();
 	int nbFrames = 0;
 
@@ -106,15 +108,15 @@ int main(int argc, char **argv) {
 		mat4 ViewMatrix = getViewMatrix2();
 		vec3 lightPos = glm::vec3(4,8,4);
         mat4 objectMatrix = getObjectMoveMat();
-        m_object1.transform(objectMatrix);
+        g_car.transform(objectMatrix);
 
         ////// Start of the rendering of the first object //////
         m_background.update(ProjectionMatrix, ViewMatrix, lightPos);
         m_background.draw();
         //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		m_object1.update(ProjectionMatrix, ViewMatrix, lightPos);
+		g_car.update(ProjectionMatrix, ViewMatrix, lightPos);
 		if(g_bShowCar)
-			m_object1.draw();
+			g_car.draw();
 
 		// Swap buffers
 		glfwSwapBuffers(hWindow);
@@ -124,7 +126,7 @@ int main(int argc, char **argv) {
 	while( glfwGetKey(hWindow, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 			glfwWindowShouldClose(hWindow) == 0 );
 	//clean up objects
-	m_object1.cleanup();
+	g_car.cleanup();
 	m_background.cleanup();
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();

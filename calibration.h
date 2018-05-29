@@ -20,6 +20,10 @@
 #define CAR_HEIGHT	2.1
 #define CAR_SCALE	2.1
 #define CAR_ORIENTATION	(0*PI/180)
+/* car movement */
+#define CAR_MOVE_STEP	0.05
+#define CAR_TURN_STEP	0.01
+#define CAR_MAX_MOVE	2.5
 /*BirdView Mode setting */
 #define BIRDVIEW_MAX_ZOOM	SPHERE_RADIUS*2
 #define BIRDVIEW_MIN_ZOOM	CAR_HEIGHT*4
@@ -38,7 +42,7 @@
 #define AHEAD_STEP_ZOOM		0.2
 #define AHEAD_ROTATE_STEP		0.02
 /* VM_BACK settings */
-#define BACK_FOV	120
+#define BACK_FOV	90
 #define BACK_MAX_ZOOM			SPHERE_RADIUS*2
 #define BACK_MIN_ZOOM			0
 #define BACK_STEP_ZOOM		1

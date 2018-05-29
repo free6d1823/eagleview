@@ -1,5 +1,6 @@
 #include <vector>
 #include <iostream>
+#include <stdio.h>
 
 // Include GLEW
 #include <GL/glew.h>
@@ -16,7 +17,6 @@ using namespace glm;
 #include <common/vboindexer.hpp>
 
 
-#include "basicobject.h"
 #include "car.h"
 #include "calibration.h"
 
@@ -96,7 +96,14 @@ m_modelMatrix = m_modelMatrix* rot;
     m_isInited = true;
 
 }
-
+vec4 Car::getPos()
+{
+	return m_modelMatrixNew[3];
+}
+vec4 Car::getDir()
+{
+	return m_modelMatrixNew[2];
+}
 void Car::update(glm::mat4& pojection, glm::mat4& view, glm::vec3& light)
 {
     glm::mat4 MVP = pojection * view * m_modelMatrixNew;

@@ -1,14 +1,22 @@
+#include <GL/glew.h>
 //GLFW first
 #include <GLFW/glfw3.h>
 // Include GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+
+
 using namespace glm;
+////////////////
+#include "car.h"
+#include "calibration.h"
 
 #include "controls.hpp"
 #include <stdio.h>
-#include "calibration.h"
+
 extern bool	g_bShowCar;
+extern Car   g_car;
 
 enum ViewMode {
     VM_NONE = 0,
@@ -48,20 +56,9 @@ glm::vec3 camUp = glm::vec3( 0, 1, 0 );
 float m_FoV = 55;
 ///////////////////////////////////////////
 
-
-//car position on the ground, forward is z-direction
-vec3 mCarPos = vec3(0,0,0);
-//car direction
-vec3 mCarDir = vec3(0,0,1);//(sin(angle) ,0, cos(angle)))
 mat4 ObjectMatrix = mat4(0);
 mat4 getObjectMoveMat()
 {
-	/*
-	ObjectMatrix = mat4(mCarDir.z, 0, mCarDir.x, mCarDir.z*mCarPos.x+mCarDir.x*mCarPos.z,
-			0,1,0,0,
-			-mCarDir.x, 0, mCarDir.z, mCarDir.z*mCarPos.z-mCarDir.x*mCarPos.x,
-			0,0,0,1);
-*/
     return ObjectMatrix;
 }
 /* process key definition VM_BIRDVIEW */
@@ -73,11 +70,11 @@ void doBirdView(GLFWwindow* hWindow) {
         posCam.x = 0;
         posCam.y = SPHERE_RADIUS;
         posCam.z = 0;
-        posLookAt.x = 0;
-        posLookAt.y = CAR_HEIGHT;
-        posLookAt.z = 0;
+        posLookAt = vec3(0,0,0);
         camUp = vec3( 0, 0, -1 );
     }
+
+
 	// Move forward
 	if (glfwGetKey( hWindow, GLFW_KEY_UP ) == GLFW_PRESS){
 		posCam.y -= BIRDVIEW_STEP_ZOOM;
@@ -110,20 +107,18 @@ void doBehindView(GLFWwindow* hWindow) {
         posCam.x = 0;
         posCam.y = (CAR_HEIGHT*2.5);
         posCam.z = (CAR_HEIGHT*2.5);
-        posLookAt.x = 0;
-        posLookAt.y = CAR_HEIGHT;
-        posLookAt.z = 0;
         camUp = vec3( 0, 1, 0 );
     }
+    posLookAt = (vec3) g_car.getPos();
 	// Move forward
 	if (glfwGetKey( hWindow, GLFW_KEY_UP ) == GLFW_PRESS){
 		posCam.z -= BEHIND_STEP_ZOOM;
-		if(posCam.z < BEHIND_MIN_ZOOM)posCam.z = BEHIND_MIN_ZOOM;
+		if(posCam.z < posLookAt.z + BEHIND_MIN_ZOOM)posCam.z = posLookAt.z + BEHIND_MIN_ZOOM;
 	}
 	// Move backward
 	else if (glfwGetKey( hWindow, GLFW_KEY_DOWN ) == GLFW_PRESS){
 		posCam.z += BEHIND_STEP_ZOOM;
-		if(posCam.z > BEHIND_MAX_ZOOM)posCam.z = BEHIND_MAX_ZOOM;
+		if(posCam.z > posLookAt.z + BEHIND_MAX_ZOOM)posCam.z = posLookAt.z + BEHIND_MAX_ZOOM;
 	}
 	// Strafe right
     float ca = cos(BEHIND_ROTATE_STEP);
@@ -135,7 +130,7 @@ void doBehindView(GLFWwindow* hWindow) {
 	else if (glfwGetKey( hWindow, GLFW_KEY_LEFT ) == GLFW_PRESS){
 		posCam = posCam * mat3(ca, 0, -sa, 0,1,0, sa, 0, ca);
 	}
-	printf("current cam (%f, %f, %f)\n", posCam.x, posCam.y, posCam.z);
+	//printf("current cam (%f, %f, %f)\n", posCam.x, posCam.y, posCam.z);
 }
 /* process key definition VM_AHEAD */
 void doAheadView(GLFWwindow* hWindow) {
@@ -146,20 +141,18 @@ void doAheadView(GLFWwindow* hWindow) {
         posCam.x = 0;
         posCam.y = (CAR_HEIGHT*2.5);;
         posCam.z = -(CAR_HEIGHT*2.5);;
-        posLookAt.x = 0;
-        posLookAt.y = CAR_HEIGHT;
-        posLookAt.z = 0;
         camUp = vec3( 0, 1, 0 );
     }
+    posLookAt = (vec3) g_car.getPos();
 	// Move forward
 	if (glfwGetKey( hWindow, GLFW_KEY_UP ) == GLFW_PRESS){
 		posCam.z -= AHEAD_STEP_ZOOM;
-		if(posCam.z < AHEAD_MIN_ZOOM)posCam.z = AHEAD_MIN_ZOOM;
+		if(posCam.z < posLookAt.z + AHEAD_MIN_ZOOM)posCam.z = posLookAt.z + AHEAD_MIN_ZOOM;
 	}
 	// Move backward
 	else if (glfwGetKey( hWindow, GLFW_KEY_DOWN ) == GLFW_PRESS){
 		posCam.z += AHEAD_STEP_ZOOM;
-		if(posCam.z > AHEAD_MAX_ZOOM)posCam.z = AHEAD_MAX_ZOOM;
+		if(posCam.z > posLookAt.z + AHEAD_MAX_ZOOM)posCam.z = posLookAt.z + AHEAD_MAX_ZOOM;
 	}
 	// Strafe right
     float ca = cos(AHEAD_ROTATE_STEP);
@@ -171,41 +164,44 @@ void doAheadView(GLFWwindow* hWindow) {
 	else if (glfwGetKey( hWindow, GLFW_KEY_LEFT ) == GLFW_PRESS){
 		posCam = posCam * mat3(ca, 0, -sa, 0,1,0, sa, 0, ca);
 	}
-	printf("current cam (%f, %f, %f)\n", posCam.x, posCam.y, posCam.z);
+	//printf("current cam (%f, %f, %f)\n", posCam.x, posCam.y, posCam.z);
 }
 /* process key definition VM_BACK */
 void doBackView(GLFWwindow* hWindow) {
+	static float fUp = 0;
     if(m_eLastMode != m_eCurrentMode) {
         //init this mode
         m_eLastMode = m_eCurrentMode;
         m_FoV = BACK_FOV;
-        posCam.x = 0;
-        posCam.y = CAR_HEIGHT*1.5;
-        posCam.z = 0;
-        posLookAt.x = 0;
-        posLookAt.y = CAR_HEIGHT*1.5;
-        posLookAt.z = SPHERE_RADIUS;
         camUp = vec3( 0, 1, 0 );
+        posLookAt.y = CAR_HEIGHT;
     }
+    posCam = (vec3) g_car.getPos();
+    posCam.y = CAR_HEIGHT*1.4; //rear mirror position
+    posLookAt.x = g_car.getDir().x * 20;
+    posLookAt.z = g_car.getDir().z * 20;
 	// Move forward
 	if (glfwGetKey( hWindow, GLFW_KEY_UP ) == GLFW_PRESS){
-		posCam.z -= 1;
+		fUp += 0.02;
 	}
 	// Move backward
 	else if (glfwGetKey( hWindow, GLFW_KEY_DOWN ) == GLFW_PRESS){
-		posCam.z += 1;
+		fUp -= 0.02;
+		if (fUp <0 ) fUp = 0;
 	}
+    posCam.z += fUp;
 	// Strafe right
-    float rotateSpeed = 0.02;
-    float ca = cos(rotateSpeed);
-    float sa = sin(rotateSpeed);
+    static float rotateSpeed = 0;
     //rotate with Y
 	if (glfwGetKey( hWindow, GLFW_KEY_RIGHT ) == GLFW_PRESS){
-		posLookAt = posLookAt * mat3(ca, 0, sa, 0,1,0, -sa, 0, ca);
+		rotateSpeed += 0.02;
 	}
 	else if (glfwGetKey( hWindow, GLFW_KEY_LEFT ) == GLFW_PRESS){
-		posLookAt = posLookAt * mat3(ca, 0, -sa, 0,1,0, sa, 0, ca);
+		rotateSpeed -= 0.02;
 	}
+    float ca = cos(rotateSpeed);
+    float sa = sin(rotateSpeed);
+	posLookAt = posLookAt * mat3(ca, 0, sa, 0,1,0, -sa, 0, ca);
 }
 
 /* process key definition VM_FRONT */
@@ -214,33 +210,39 @@ void doFrontView(GLFWwindow* hWindow) {
         //init this mode
         m_eLastMode = m_eCurrentMode;
         m_FoV = 80;
-        posCam.x = -0.3;
-        posCam.y = CAR_HEIGHT*1.4;;
-        posCam.z = -0.3;
-        posLookAt.x = 0;
-        posLookAt.y = CAR_HEIGHT*1.4;
-        posLookAt.z = -SPHERE_RADIUS;
+        posLookAt.y = CAR_HEIGHT;
         camUp = vec3( 0, 1, 0 );
     }
+	static float fUp = 0;
 	// Move forward
 	if (glfwGetKey( hWindow, GLFW_KEY_UP ) == GLFW_PRESS){
-		posCam.z -= 0.1;
+		fUp -= 0.1;
 	}
 	// Move backward
 	else if (glfwGetKey( hWindow, GLFW_KEY_DOWN ) == GLFW_PRESS){
-		posCam.z += 0.1;
+		fUp += 0.1;
 	}
-	// Strafe right
-    float rotateSpeed = 0.02;
-    float ca = cos(rotateSpeed);
-    float sa = sin(rotateSpeed);
+
+    posCam = (vec3) g_car.getPos();
+    posCam.z += fUp;
+    posCam.y = CAR_HEIGHT*1.4; //rear mirror position
+    posCam.x -= 0.5;
+//    posCam.z -= 0.5;
+    posLookAt.x = g_car.getDir().x * 20;
+    posLookAt.z = -g_car.getDir().z * 20;
+
+
+    static float rotateSpeed = 0;
     //rotate with Y
 	if (glfwGetKey( hWindow, GLFW_KEY_RIGHT ) == GLFW_PRESS){
-		posLookAt = posLookAt * mat3(ca, 0, sa, 0,1,0, -sa, 0, ca);
+		rotateSpeed += 0.02;
 	}
 	else if (glfwGetKey( hWindow, GLFW_KEY_LEFT ) == GLFW_PRESS){
-		posLookAt = posLookAt * mat3(ca, 0, -sa, 0,1,0, sa, 0, ca);
+		rotateSpeed -= 0.02;
 	}
+    float ca = cos(rotateSpeed);
+    float sa = sin(rotateSpeed);
+	posLookAt = posLookAt * mat3(ca, 0, sa, 0,1,0, -sa, 0, ca);
 }
 /* process key definition VM_LEFT */
 void doLeftView(GLFWwindow* hWindow) {
@@ -311,22 +313,65 @@ void doRightView(GLFWwindow* hWindow) {
 	}
 }
 void doSatView(GLFWwindow* hWindow) {
+	static float theda = 0; //this is moving with time
+	static float phi = 35*PI/180; //adjust by UP/DOWN
+	static float speed = 0.001;// theda variation, adjusted by LEFT/RIGHT
+
+    posLookAt = (vec3) g_car.getPos();
+    if(m_eLastMode != m_eCurrentMode) {
+        m_eLastMode = m_eCurrentMode;
+        m_FoV = 55;
+        camUp = vec3( 0, 1, 0 );
+        speed = 0.001;
+    }
+
+	// Move forward
+	if (glfwGetKey( hWindow, GLFW_KEY_UP  ) == GLFW_PRESS){
+		phi += 0.005;
+		if (phi> 85*PI/180) phi = 85*PI/180;
+	}
+	// Move backward
+	else if (glfwGetKey( hWindow, GLFW_KEY_DOWN ) == GLFW_PRESS){
+		phi -= 0.005;
+		if( phi < 30*PI/180) phi =30*PI/180;
+	}
+	if (glfwGetKey( hWindow, GLFW_KEY_LEFT  ) == GLFW_PRESS){
+		speed+= 0.0005;
+	}
+	else if (glfwGetKey( hWindow, GLFW_KEY_RIGHT ) == GLFW_PRESS){
+		speed-= 0.0005;
+	}
+	theda += speed;
+	if(theda > 2*PI) theda -= 2*PI;
+	if(theda < 0)theda+= 2*PI;
+
+    float cx = cos(phi);
+    float sx = sin(phi);
+    float cy = cos(theda);
+    float sy = sin(theda);
+
+    posCam = vec3(0,0, SPHERE_RADIUS*0.85) *
+    		mat3(1,0,0, 0, cx, sx, 0, -sx, cx)* mat3(cy, 0, sy, 0,1,0, -sy, 0, cy);
+printf("Cam pos(%f,%f,%f)\n", posCam.x, posCam.y, posCam.z);
+
+}
+void doSatView2(GLFWwindow* hWindow) {
 	static float speed = 0.001;
 	static float angle = 15*3.14/180;
 	static float radius = 10;
+
+    posLookAt = (vec3) g_car.getPos();
     if(m_eLastMode != m_eCurrentMode) {
         //init this mode
         m_eLastMode = m_eCurrentMode;
         m_FoV = 60;
-        posLookAt.x = 0;
-        posLookAt.y = 5;
-        posLookAt.z = 0;
-        posCam.x = 0;
-        posCam.y = posLookAt.y;
-        posCam.z = radius;
+        //posCam.x = 0;
+        //posCam.y = posLookAt.y;
+        //posCam.z = radius;
         camUp = vec3( 0, 1, 0 );
         speed = 0.001;
     }
+
 	// Move forward
 	if (glfwGetKey( hWindow, GLFW_KEY_UP ) == GLFW_PRESS){
 		angle += 0.01;
@@ -351,6 +396,7 @@ void doSatView(GLFWwindow* hWindow) {
     ca = cos(speed);
     sa = sin(speed);
 	posCam = posCam * mat3(ca, 0, sa, 0,1,0, -sa, 0, ca);
+printf("Cam pos(%f,%f,%f)\n", posCam.x, posCam.y, posCam.z);
 
 }
 ////////////////////////////////////////////////////////////////////////////
@@ -398,22 +444,24 @@ void computeMatricesFromInputs2(GLFWwindow* hWindow){
 
     ObjectMatrix = mat4(0);
 	if (glfwGetKey( hWindow, GLFW_KEY_A ) == GLFW_PRESS){
-		fRy -= 0.01;
+		fRy -= CAR_TURN_STEP;
 	}
-	if (glfwGetKey( hWindow, GLFW_KEY_D ) == GLFW_PRESS){
-        fRy += 0.01;
+	else if (glfwGetKey( hWindow, GLFW_KEY_D ) == GLFW_PRESS){
+        fRy += CAR_TURN_STEP;
 	}
     if (glfwGetKey( hWindow, GLFW_KEY_W ) == GLFW_PRESS){
             //car forward
-        fTz -= 0.01;
+        fTz -= CAR_MOVE_STEP;
+        if (fTz < -CAR_MAX_MOVE)fTz = -CAR_MAX_MOVE;
     }
-    if (glfwGetKey( hWindow, GLFW_KEY_X ) == GLFW_PRESS){
-        fTz += 0.01;
+    else if (glfwGetKey( hWindow, GLFW_KEY_X ) == GLFW_PRESS){
+        fTz += CAR_MOVE_STEP;
+        if (fTz > CAR_MAX_MOVE) fTz = CAR_MAX_MOVE;
     }
     if (glfwGetKey( hWindow, GLFW_KEY_S ) == GLFW_PRESS){
         fTz = 0; fRy = 0;
     }
-
+    //printf("z=%f\n", fTz);
 
     mat4 tx = mat4(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,fTz,1);
 float cy=  cos(fRy);
