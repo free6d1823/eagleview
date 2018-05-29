@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 	Sphere	m_background;
 
 
-	printf("Hello All !\n");
+	printf("-- AVM Demo --\n");
 
 	// Initialise GLFW
 	if( !glfwInit() )
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	hWindow = glfwCreateWindow( 1024, 768, "Tutorial 09 - Rendering several models", NULL, NULL);
+	hWindow = glfwCreateWindow( 1024, 768, "AVM Demo", NULL, NULL);
 	if( hWindow == NULL ){
 		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
 		getchar();
